@@ -1,0 +1,16 @@
+# build artifacts
+build/
+build-*/
+CMakeCache.txt
+CMakeFiles/
+compile_commands.json
+
+# local installs / deps
+deps/
+hpx-install/
+*.o
+*.a
+*.so*
+*.dylib
+.DS_Store
+
