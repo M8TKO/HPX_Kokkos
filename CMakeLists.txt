@@ -25,12 +25,13 @@ find_package(HPX REQUIRED CONFIG)
 # ---- Targets
 
 # Your original Kokkos benchmark
-add_executable(measuringTimeWithKokkos src/measuringTimeWithKokkos.cpp)
-target_link_libraries(measuringTimeWithKokkos
-  PRIVATE
-    Kokkos::kokkos
-    OpenMP::OpenMP_CXX
-)
+# add_executable(measuringTimeWithKokkos src/measuringTimeWithKokkos.cpp)
+# target_link_libraries(measuringTimeWithKokkos
+#   PRIVATE
+#     Kokkos::kokkos
+#     HPX::hpx
+#     OpenMP::OpenMP_CXX
+# )
 
 # HPX + Kokkos demo
 # (Remember: in src/hpx_kokkos_demo.cpp we wrap HPX includes with push/pop of _OPENMP.)
