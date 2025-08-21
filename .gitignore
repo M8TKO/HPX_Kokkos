@@ -1,0 +1,21 @@
+# Build directories
+build/
+CMakeFiles/
+
+# CMake cache
+CMakeCache.txt
+CMakeScripts/
+
+# Compile database
+compile_commands.json
+
+# Other common ignores
+*.o
+*.obj
+*.exe
+*.out
+*.a
+*.so
+*.dylib
+*.swp
+*.log
