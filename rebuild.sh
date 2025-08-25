@@ -1,46 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# --- Defaults / discovery ----------------------------------------------------
+# --- Defaults / simple flags -------------------------------------------------
 TARGET=""
 RUN_AFTER_BUILD=0
 
-# Allow overrides via env vars
-HPX_DIR_ENV="${HPX_DIR:-$HOME/hpx-install/lib/cmake/HPX}"
-KOKKOS_DIR_ENV="${Kokkos_DIR:-}"
+# Optional: allow picking a GPU arch via env var or default to AMPERE86
+: "${KOKKOS_GPU_ARCH:=AMPERE86}"
 
-if [[ -z "${KOKKOS_DIR_ENV}" ]]; then
-  if command -v spack >/dev/null 2>&1; then
-    KOKKOS_PREFIX="$(spack location -i kokkos 2>/dev/null || true)"
-    if [[ -n "${KOKKOS_PREFIX}" && -d "${KOKKOS_PREFIX}/lib/cmake/Kokkos" ]]; then
-      KOKKOS_DIR_ENV="${KOKKOS_PREFIX}/lib/cmake/Kokkos"
-    fi
-  fi
-fi
-# Fallback to a manual install if Spack isn’t available
-if [[ -z "${KOKKOS_DIR_ENV}" && -d "$HOME/kokkos-install/lib/cmake/Kokkos" ]]; then
-  KOKKOS_DIR_ENV="$HOME/kokkos-install/lib/cmake/Kokkos"
-fi
+# Optional: CUDA location (set only if not in /usr/local/cuda)
+: "${CUDAToolkit_ROOT:=}"
 
-if [[ -z "${KOKKOS_DIR_ENV}" ]]; then
-  echo "Error: Could not determine Kokkos_DIR."
-  echo "Set env var Kokkos_DIR, or install via Spack, or put Kokkos in \$HOME/kokkos-install."
-  exit 1
-fi
+# HPX location (still fine to keep this if you don’t install HPX system-wide)
+: "${HPX_DIR:=$HOME/hpx-install/lib/cmake/HPX}"
 
 # --- Helper: run a built target ---------------------------------------------
 run_target() {
   local tgt="$1"; shift || true
   local args=("$@")
-  if [[ -z "$tgt" ]]; then
-    echo "Error: no target specified"; exit 1
-  fi
-  if [[ ! -d build ]]; then
-    echo "Error: build/ does not exist. Build first or use --buildrun."; exit 1
-  fi
-  if [[ ! -x "build/$tgt" ]]; then
-    echo "Error: build/$tgt not found or not executable. Build first or use --buildrun."; exit 1
-  fi
+  if [[ -z "$tgt" ]]; then echo "Error: no target specified"; exit 1; fi
+  if [[ ! -d build ]]; then echo "Error: build/ does not exist. Build first or use --buildrun."; exit 1; fi
+  if [[ ! -x "build/$tgt" ]]; then echo "Error: build/$tgt not found or not executable. Build first or use --buildrun."; exit 1; fi
   echo ">>> Running: build/$tgt ${args[*]}"
   "./build/$tgt" "${args[@]}"
 }
@@ -69,14 +49,21 @@ mkdir build
 cd build
 
 echo ">>> Configuring with:"
-echo "    HPX_DIR    = ${HPX_DIR_ENV}"
-echo "    Kokkos_DIR = ${KOKKOS_DIR_ENV}"
+echo "    HPX_DIR           = ${HPX_DIR}"
+echo "    CUDAToolkit_ROOT  = ${CUDAToolkit_ROOT:-<auto>}"
+echo "    Kokkos GPU Arch   = ${KOKKOS_GPU_ARCH}"
 
-cmake -S .. -B . \
+# IMPORTANT:
+#  - Do NOT pass Kokkos_DIR (we use FetchContent in top-level CMake).
+#  - Use the *new* per-arch option -DKokkos_ARCH_<NAME>=ON (e.g., AMPERE86).
+cmake .. \
   -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-  -DHPX_DIR="${HPX_DIR_ENV}" \
-  -DKokkos_DIR="${KOKKOS_DIR_ENV}"
+  -DHPX_DIR="$HOME/hpx-install/lib/cmake/HPX" \
+  -DKokkos_ENABLE_CUDA=ON \
+  -DKokkos_ENABLE_OPENMP=ON \
+  -DKokkos_ENABLE_SERIAL=ON \
+  -DKokkos_ARCH_AMPERE86=ON \
+  -DDOWNLOAD_EXTRACT_TIMESTAMP=TRUE
 
 cmake --build . -j"$(nproc)"
 
