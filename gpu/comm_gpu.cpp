@@ -2,6 +2,7 @@
 #include <Kokkos_Core.hpp>
 #include <mutex>
 #include <iostream>
+#include <iomanip> 
 
 // ---- Kokkos runtime control (initialize once, finalize once) ----
 namespace {
@@ -25,6 +26,7 @@ void comm_runtime_finalize() {
 }
 
 struct communicator::impl {
+    Kokkos::DefaultExecutionSpace exec;
     Kokkos::View<double*> d;
     std::size_t n = 0;
 };
@@ -48,7 +50,7 @@ void communicator::resize(std::size_t n) {
 
     auto v = p->d;
     Kokkos::parallel_for("init", static_cast<int>(n), KOKKOS_LAMBDA(int i){
-        v(i) = i;
+        v(i) = 1.0;
     });
     Kokkos::fence();
 }
@@ -62,6 +64,23 @@ void communicator::print() const {
     auto h = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), p->d);
     std::cout << "( " << h(0);
     for (std::size_t i = 1; i < p->n; ++i) 
-         std::cout << ", " << h(i);
+         std::cout << std::setprecision(10) << ", " << h(i);
     std::cout << " )\n";
 }
+
+void communicator::calculation() const {
+    auto v = p->d;
+    auto n = p->n; 
+    Kokkos::Timer timer;
+    Kokkos::parallel_for("calculation",
+      Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(p->exec, 0, static_cast<int>(n)),
+      KOKKOS_LAMBDA (int i){
+        for(int j = 0 ; j < 1e9 ; j++)
+            v(i) += 0.001;
+    });
+    Kokkos::fence();
+    std::cout << "Kokkos time: " << timer.seconds() << std::endl;
+}
+
+void communicator::fence() const { Kokkos::fence(); }
+

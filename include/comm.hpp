@@ -19,4 +19,6 @@ public:
 
     void resize(std::size_t n);
     void print() const;
+    void calculation() const;
+    void fence() const;
 };

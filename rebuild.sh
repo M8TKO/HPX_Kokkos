@@ -22,7 +22,19 @@ run_target() {
   if [[ ! -d build ]]; then echo "Error: build/ does not exist. Build first or use --buildrun."; exit 1; fi
   if [[ ! -x "build/$tgt" ]]; then echo "Error: build/$tgt not found or not executable. Build first or use --buildrun."; exit 1; fi
   echo ">>> Running: build/$tgt ${args[*]}"
-  "./build/$tgt" "${args[@]}"
+  
+  cmake --build build -j"$(nproc)" || { echo "Build failed"; exit 1; }
+
+  if [[ -x "build/$tgt" ]]; then
+    echo ">>> Running: build/$tgt ${args[*]}"
+    "./build/$tgt" "${args[@]}"
+  elif [[ -x "build/bin/$tgt" ]]; then
+    echo ">>> Running: build/bin/$tgt ${args[*]}"
+    "./build/bin/$tgt" "${args[@]}"
+  else
+    echo "Error: executable '$tgt' not found in build/ or build/bin/"
+    exit 1
+  fi
 }
 
 # --- Parse args --------------------------------------------------------------
