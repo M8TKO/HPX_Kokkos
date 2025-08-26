@@ -2,6 +2,7 @@
 #include <Kokkos_Core.hpp>
 #include <mutex>
 #include <iostream>
+#include <variant>
 
 // ---- Kokkos runtime control (initialize once, finalize once) ----
 namespace {
@@ -12,7 +13,6 @@ namespace {
 void comm_runtime_init(int& argc, char**& argv) {
     std::call_once(g_kokkos_once, [&]{
         Kokkos::initialize(argc, argv);
-        std::cout << "Default Execution Space: " << Kokkos::DefaultExecutionSpace::name() << std::endl;
         g_finalize = true;
     });
 }
@@ -25,16 +25,31 @@ void comm_runtime_finalize() {
 }
 
 struct communicator::impl {
+    using exec_variant = std::variant<Kokkos::Cuda, Kokkos::OpenMP, Kokkos::Serial>;
+    exec_variant exec_space;
     Kokkos::View<double*> d;
     std::size_t n = 0;
 };
 
 // constructors / destructor
-communicator::communicator() : p(new impl) {}
-
-communicator::communicator(std::size_t n) : p(new impl) {
-    resize(n);
+communicator::communicator(std::string s) : p(new impl) {
+    if( s == "Cuda" ) {
+        p->exec_space = Kokkos::Cuda();
+    } else if( s == "OpenMP" ) {
+        p->exec_space = Kokkos::OpenMP();
+    } else if( s == "Serial" ) {
+        p->exec_space = Kokkos::Serial();
+    } else {
+        throw std::runtime_error("communicator: Unknown execution space " + s);
+    }
 }
+
+communicator::communicator(std::size_t n, std::string s) : communicator(s) {
+    resize(n);
+    std::visit([](auto const& ex){
+        using ES = std::decay_t<decltype(ex)>;
+        std::cout << "Execution Space: " << ES::name() << '\n';
+    }, p->exec_space);}
 
 communicator::~communicator() {
     delete p;
@@ -65,3 +80,5 @@ void communicator::print() const {
          std::cout << ", " << h(i);
     std::cout << " )\n";
 }
+
+

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
+clear
 # --- Defaults / simple flags -------------------------------------------------
 TARGET=""
 RUN_AFTER_BUILD=0
@@ -53,9 +53,6 @@ echo "    HPX_DIR           = ${HPX_DIR}"
 echo "    CUDAToolkit_ROOT  = ${CUDAToolkit_ROOT:-<auto>}"
 echo "    Kokkos GPU Arch   = ${KOKKOS_GPU_ARCH}"
 
-# IMPORTANT:
-#  - Do NOT pass Kokkos_DIR (we use FetchContent in top-level CMake).
-#  - Use the *new* per-arch option -DKokkos_ARCH_<NAME>=ON (e.g., AMPERE86).
 cmake .. \
   -DCMAKE_BUILD_TYPE=Release \
   -DHPX_DIR="$HOME/hpx-install/lib/cmake/HPX" \
@@ -63,6 +60,7 @@ cmake .. \
   -DKokkos_ENABLE_OPENMP=ON \
   -DKokkos_ENABLE_SERIAL=ON \
   -DKokkos_ARCH_AMPERE86=ON \
+  -DCMAKE_CXX_STANDARD=20 \
   -DDOWNLOAD_EXTRACT_TIMESTAMP=TRUE
 
 cmake --build . -j"$(nproc)"

@@ -5,8 +5,10 @@
 int hpx_main(int argc, char** argv) {
     comm_runtime_init(argc, argv);     
     {
-        communicator c(8);
-        c.print();
+        communicator c1(8, "Cuda");
+        communicator c2(8, "OpenMP");
+        
+        
     }
     comm_runtime_finalize();           
     return hpx::local::finalize();
